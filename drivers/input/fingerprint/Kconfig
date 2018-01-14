@@ -1,0 +1,108 @@
+#
+#Fingerprint
+#
+menu "Fingerprint support"
+    depends on INPUT
+
+config MTK_FINGERPRINT_SUPPORT
+    bool "Mediatek Fingerprint"
+    default n
+    ---help---
+    Fingerprint mtk driver enable/disable in the kernel.
+    Say Y here if you want to use mediatek fingerprint driver,
+    fingerprint driver will support fingerprint function
+
+if MTK_FINGERPRINT_SUPPORT
+config MTK_FINGERPRINT_SELECT
+    string "sensor type"
+    default "GF318M"
+
+
+if MTK_FINGERPRINT_SELECT = "FPC1145"
+config FPC_FINGERPRINT
+    bool "FPC Fingerprint"
+    default n
+    ---help---
+    FPC fingerprint FPC's 102x/104x device.
+endif
+
+if MTK_FINGERPRINT_SELECT = "GF318M"
+config GOODIX_FINGERPRINT
+    bool "Goodix Fingerprint"
+    default n
+    ---help---
+    Goodix Fingerprint chip GF316M/GF318M/GF3118M/GF518M/GF5118M/GF516M/GF816M/GF3208/GF5216 TEE driver
+
+config GOODIX_SENSOR_TYPE
+    string "SENSOR_TYPE"
+    default "GF318M"
+    ---help---
+    Must input sensor type, or default is GF316M GF318M GF3118M GF518M GF5118M GF516M GF816M GF3208 GF5216
+endif
+
+config MA083T_FINGERPRINT
+    bool "MA083T Fingerprint"
+    default n
+    ---help---
+    MA083T Fingerprint chip ma083t driver
+
+config MA080T_FINGERPRINT
+    bool "MA080T Fingerprint"
+    default n
+    ---help---
+    MA080T Fingerprint chip ma080t driver
+
+config FINGERPRINT_MA120N
+    bool "ma120n Fingerprint"
+    default n
+    ---help---
+    MA120N Fingerprint chip ma120n driver
+
+config FINGERPRINT_MA120N_TEE
+    bool "ma120n tee Fingerprint"
+    default n
+    ---help---
+    MA120N TEE Fingerprint chip ma120n tee driver
+
+config MTK_MA116N
+        bool "MA116N for MediaTek package"
+        default n
+
+config MTK_SUNWAVECORP
+    bool "SUNWAVE Fingerprint"
+    default n
+    ---help---
+    SUNWAVE Fingerprint chip sunwave driver
+
+config MTK_SUNWAVECORP_TEE
+    bool "SUNWAVE TEE Fingerprint"
+    default n
+    ---help---
+    SUNWAVE TEE Fingerprint chip sunwave tee driver
+
+endif
+
+config FINGERPRINT_GF3258
+    bool "gf3258 Fingerprint"
+    default n
+    ---help---
+    GF3258 Fingerprint chip gf3258 driver
+
+config FINGERPRINT_MA096N
+    bool "ma096n Fingerprint"
+    default n
+    ---help---
+    MA096N Fingerprint chip ma096n driver
+
+config MTK_MA118N_TEE
+    bool "ma118n tee Fingerprint"
+    default n
+    ---help---
+    MA118N TEE Fingerprint chip ma118n tee driver
+
+config MA083T_TEE_FINGERPRINT
+    bool "MA083T TEE Fingerprint"
+    default n
+    ---help---
+    MA083T TEE Fingerprint chip ma083t tee driver
+endmenu

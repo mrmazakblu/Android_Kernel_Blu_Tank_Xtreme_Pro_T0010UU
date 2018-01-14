@@ -1,0 +1,25 @@
+#
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/kconfig-language.txt.
+#
+mainmenu "Linux/$ARCH $KERNELVERSION Kernel Configuration"
+
+config SRCARCH
+	string
+	option env="SRCARCH"
+
+config DROI_PRO
+	string "DROI_PRO"
+	help
+	  To choose kernel DROI project define
+
+config DROI_PRO_CUSTOM
+	string "DROI_PRO_CUSTOM"
+	help
+	  To choose kernel DROI project custom define
+
+config DROI_PRO_CUSTOM_CHILD
+	string "DROI_PRO_CUSTOM_CHILD"
+	help
+	  To choose kernel DROI project custom child define
+source "arch/$SRCARCH/Kconfig"

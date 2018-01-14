@@ -1,0 +1,1 @@
+obj-y += imx190mipiraw_Sensor.o

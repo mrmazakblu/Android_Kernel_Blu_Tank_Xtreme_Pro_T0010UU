@@ -1,0 +1,5 @@
+#
+# Touchscreen driver configuration
+#
+if TOUCHSCREEN_MTK_GT1151
+endif

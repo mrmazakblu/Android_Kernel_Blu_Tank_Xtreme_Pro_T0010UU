@@ -1,0 +1,4 @@
+config MTK_NXP_TFA9890
+    bool "MTK_NXP_TFA9890"
+	help
+      SMARTPA sensor driverto detect 

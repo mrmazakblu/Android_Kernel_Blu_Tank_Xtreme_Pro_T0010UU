@@ -1,0 +1,1 @@
+obj-y += vd6955mipiraw_Sensor.o

@@ -1,0 +1,12 @@
+
+config DROI_GESTURE
+	bool "DROI_GESTURE for MediaTek package"
+	depends on TOUCHSCREEN_MTK
+	depends on MTK_HWMON
+	default n
+	help
+	It support different type sensor
+	in this platform. droi virtual sensor 
+	depends proximity or gesture sensor driver.
+	
+

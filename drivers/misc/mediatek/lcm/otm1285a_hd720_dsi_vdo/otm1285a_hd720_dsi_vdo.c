@@ -1,0 +1,538 @@
+#ifdef BUILD_LK
+#else
+#include <linux/string.h>
+#endif
+
+#include "lcm_drv.h"
+
+#ifdef BUILD_LK
+	#include <platform/upmu_common.h>
+	#include <platform/upmu_hw.h>
+	#include <platform/mt_gpio.h>
+	#include <platform/mt_i2c.h>
+	#include <platform/mt_pmic.h>
+	#include <string.h>
+#else
+	#include <mt-plat/upmu_common.h>
+	#include <mach/upmu_sw.h>
+	#include <mach/upmu_hw.h>
+
+	#include <mt-plat/mt_gpio.h>
+#endif
+
+#ifndef TRUE
+	#define TRUE 1
+#endif
+
+#ifndef FALSE
+	#define FALSE 0
+#endif
+
+
+#define FRAME_WIDTH                                          (720)
+#define FRAME_HEIGHT                                         (1280)
+
+#define REGFLAG_DELAY                                         0xFFE
+#define REGFLAG_END_OF_TABLE                                  0xFFD
+
+#define LCM_ID_OTM1285A                                    0x1285
+#define LCM_DSI_CMD_MODE                                    0
+
+static LCM_UTIL_FUNCS lcm_util = {0};
+
+#define SET_RESET_PIN(v)    (lcm_util.set_reset_pin((v)))
+
+#define UDELAY(n) (lcm_util.udelay(n))
+#define MDELAY(n) (lcm_util.mdelay(n))
+
+
+//added for lcm detect ,read adc voltage
+#define AUXADC_LCM_VOLTAGE_CHANNEL     12
+#define MIN_VOLTAGE (1000) //1000mV
+#define MAX_VOLTAGE (1400) //1400mV
+extern int IMM_GetOneChannelValue(int dwChannel, int data[4], int* rawdata);
+
+
+#define dsi_set_cmdq_V2(cmd, count, ppara, force_update) \
+	lcm_util.dsi_set_cmdq_V2(cmd, count, ppara, force_update)
+#define dsi_set_cmdq(pdata, queue_size, force_update) \
+	lcm_util.dsi_set_cmdq(pdata, queue_size, force_update)
+#define wrtie_cmd(cmd) \
+	lcm_util.dsi_write_cmd(cmd)
+#define write_regs(addr, pdata, byte_nums) \
+	lcm_util.dsi_write_regs(addr, pdata, byte_nums)
+#define read_reg(cmd) \
+	lcm_util.dsi_dcs_read_lcm_reg(cmd)
+#define read_reg_v2(cmd, buffer, buffer_size) \
+	lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)
+
+
+struct LCM_setting_table {
+    unsigned cmd;
+    unsigned char count;
+    unsigned char para_list[64];
+};
+
+static struct LCM_setting_table lcm_initialization_setting[] = {
+
+    {0x00, 1, {0x00}},
+	{0xff, 3, {0x12,0x85,0x01}},
+
+	{0x00, 1, {0x80}},
+	{0xff, 2, {0x12,0x85}},
+
+	{0x00, 1, {0x8a}},
+	{0xf5, 1, {0x0e}},
+
+	{0x00, 1, {0x8b}},
+	{0xf5, 1, {0x15}},
+
+	{0x00, 1, {0xa2}},
+	{0xc1, 1, {0x00}},
+
+	{0x00, 1, {0x91}},
+	{0xb3, 2, {0x0c,0x10}},//08
+
+	{0x00, 1, {0xb3}},
+	{0xc0, 1, {0x33}},
+
+	{0x00, 1, {0xb4}},
+	{0xc0, 1, {0x50}},
+
+	{0x00, 1, {0x80}},
+	{0xc1, 1, {0x19}},
+
+	{0x00, 1, {0x81}},
+	{0xc1, 1, {0x19}},
+
+	{0x00, 1, {0x82}},
+	{0xc1, 1, {0x19}},
+
+	{0x00, 1, {0x83}},
+	{0xc1, 1, {0x19}},
+
+	{0x00, 1, {0x90}},
+	{0xc1, 2, {0x66,0x00}},
+
+	{0x00, 1, {0x80}},
+	{0xc0, 9, {0x00,0x96,0x00,0x08,0x08,0x00,0x96,0x08,0x08}},
+
+	{0x00, 1, {0x80}},
+	{0xc2, 8, {0x82,0x00,0x0a,0x00,0x83,0x00,0x0a,0x00}},
+
+	{0x00, 1, {0x90}},
+	{0xc2, 15, {0x00,0x08,0x03,0x0a,0x00,0x01,0x08,0x03,0x0a,0x00,0x02,0x08,0x03,0x0a,0x00}},
+
+	{0x00, 1, {0xa0}},
+	{0xc2, 15, {0x03,0x08,0x03,0x0a,0x00,0x04,0x08,0x03,0x0a,0x00,0x05,0x08,0x03,0x0a,0x00}},
+
+	{0x00, 1, {0xb0}},
+	{0xc2, 10, {0x82,0x08,0x03,0x0a,0x00,0x81,0x08,0x03,0x0a,0x00}},
+
+	{0x00, 1, {0xea}},
+	{0xc2, 3, {0x88,0x08,0x33}},
+
+	{0x00, 1, {0xfa}},
+	{0xc2, 3, {0x00,0x0c,0x00}},
+
+	{0x00, 1, {0x80}},
+	{0xc4, 1, {0x88}},
+
+	{0x00, 1, {0x83}},
+	{0xc4, 1, {0x20}},
+
+	{0x00, 1, {0x80}},
+	{0xcb, 7, {0x00,0x00,0x00,0x00,0x00,0x00,0x00}},
+
+	{0x00, 1, {0x90}},
+	{0xcb, 15, {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}},
+
+	{0x00, 1, {0xa0}},
+	{0xcb, 12, {0x00,0x00,0x00,0x00,0x00,0x00,0xc0,0xc0,0xc0,0x00,0x00,0x00}},
+
+	{0x00, 1, {0xc0}},
+	{0xcb, 15, {0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x00,0x00,0x00,0x00,0x00}},
+
+	{0x00, 1, {0xd0}},
+	{0xcb, 12, {0x00,0x00,0x00,0x00,0x00,0x00,0xfd,0xfd,0xfd,0x00,0x00,0x00}},
+
+	{0x00, 1, {0xf0}},
+	{0xcb, 12, {0xff,0xff,0x0f,0x03,0x30,0xfc,0x00,0x00,0x00,0x00,0x00,0x00}},
+
+	{0x00, 1, {0x80}},
+	{0xcc, 10, {0x01,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x02}},
+
+	{0x00, 1, {0xb0}},
+	{0xcc, 10, {0x02,0x0a,0x09,0x08,0x07,0x06,0x05,0x04,0x03,0x01}},
+
+	{0x00, 1, {0xd0}},
+	{0xcd, 15, {0x01,0x09,0x07,0x05,0x03,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d}},
+
+	{0x00, 1, {0xb0}},
+	{0xcd, 15, {0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x16,0x17,0x18,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d}},
+
+	{0x00, 1, {0xa0}},
+	{0xcd, 15, {0x0a,0x08,0x06,0x04,0x02,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d}},
+
+	{0x00, 1, {0xe0}},
+	{0xcd, 15, {0x2d,0x2d,0x2d,0x2d,0x2d,0x2d,0x16,0x17,0x18,0x2d,0x2d,0x2d,0x2d,0x2d,0x2d}},
+
+	{0x00, 1, {0xe0}},
+	{0xcc, 4, {0x00,0xfc,0x1f,0x07}},
+
+	{0x00, 1, {0xa0}},
+	{0xc0, 12, {0x00,0x01,0x15,0x04,0x00,0x15,0x04,0x00,0x00,0xff,0xff,0x00}},
+
+	{0x00, 1, {0x80}},
+	{0xcd, 15, {0x0b,0x0b,0x0b,0x0b,0x0b,0x0b,0x0b,0x0b,0x0b,0x14,0x13,0x12,0x0b,0x0b,0x0b}},
+
+	{0x00, 1, {0x00}},
+	{0xd9, 1, {0x8B}},//82
+
+	{0x00, 1, {0x00}},
+	{0x00, 0, {0x00}},
+
+	{0x00, 1, {0x00}},
+	{0xd8, 2, {0x36,0x36}},
+
+	{0x00, 1, {0x00}},
+	{0x00, 0, {0x00}},
+
+	{0x00, 1, {0x00}},
+	{0xe1, 24, {0x11,0x17,0x20,0x2b,0x35,0x3c,0x49,0x5b,0x64,0x76,0x82,0x8b,0x6d,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xe2, 24, {0x0b,0x17,0x20,0x2b,0x35,0x3c,0x49,0x5b,0x64,0x76,0x82,0x8b,0x6d,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xe3, 24, {0x11,0x18,0x21,0x2c,0x35,0x3d,0x49,0x5b,0x64,0x77,0x82,0x8b,0x6d,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xe4, 24, {0x0b,0x18,0x21,0x2c,0x35,0x3d,0x49,0x5b,0x64,0x77,0x82,0x8b,0x6c,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xe5, 24, {0x11,0x16,0x1f,0x29,0x32,0x39,0x46,0x58,0x62,0x75,0x81,0x8a,0x6d,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xe6, 24, {0x0b,0x16,0x1f,0x29,0x32,0x39,0x46,0x58,0x62,0x75,0x81,0x8a,0x6d,0x66,0x5e,0x4d,0x37,0x24,0x1b,0x14,0x0f,0x0c,0x0a,0x08}},
+
+	{0x00, 1, {0x00}},
+	{0xec, 33, {0x60,0x44,0x43,0x43,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x04}},
+
+	{0x00, 1, {0x00}},
+	{0xed, 33, {0x60,0x44,0x43,0x43,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x04}},
+
+	{0x00, 1, {0x00}},
+	{0xee, 33, {0x40,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x04}},
+
+	{0x00, 1, {0x9d}},
+	{0xc5, 1, {0xf8}},
+
+	{0x00, 1, {0xa2}},
+	{0xc0, 1, {0x06}},
+
+	{0x00, 1, {0xa5}},
+	{0xc0, 1, {0x23}},
+
+	{0x00, 1, {0x92}},
+	{0xe9, 1, {0x20}},
+
+	{0x00, 1, {0x92}},
+	{0xc5, 7, {0xc0,0x17,0xc0,0x1a,0x80,0x16,0x40}},
+
+	{0x00, 1, {0xa2}},
+	{0xc5, 4, {0xc0,0x17,0xc0,0x1b}},
+
+	{0x00, 1, {0xa7}},
+	{0xc5, 1, {0x16}},
+
+	{0x00, 1, {0xa9}},
+	{0xc5, 1, {0x1a}},
+
+    {0x11, 1,  {0x00}}, //SLEEP OUT
+    {REGFLAG_DELAY, 120, {}},
+
+    {0x29,1,	 {0x00}}, //Display ON
+
+    {REGFLAG_END_OF_TABLE, 0x00, {}},
+};
+
+
+static struct LCM_setting_table lcm_deep_sleep_mode_in_setting[] = {
+
+    {0x00,1,{0x00}},
+    {0xFF,3,{0x12,0x85,0x01}},
+
+    {0x00,1,{0x80}},
+    {0xFF,2,{0x12,0x85}},
+
+    {0x00,1,{0x91}},
+    {0xB3,2,{0x0C,0x10}},
+
+    {0x00,1,{0xB3}},
+    {0xC0,1,{0x55}},
+    {REGFLAG_DELAY, 50, {}},
+
+    {0x22, 1, {0x00}},
+    {REGFLAG_DELAY, 50, {}},
+
+    // Display off sequence
+    {0x28, 1, {0x00}},
+    {REGFLAG_DELAY, 50, {}},
+
+    // Sleep Mode On
+    {0x10, 1, {0x00}},
+    {REGFLAG_DELAY, 150, {}},
+
+    {REGFLAG_END_OF_TABLE, 0x00, {}}
+};
+
+static void push_table(struct LCM_setting_table *table, unsigned int count, unsigned char force_update)
+{
+    unsigned int i;
+
+    for(i = 0; i < count; i++) {
+
+        unsigned cmd;
+        cmd = table[i].cmd;
+
+        switch (cmd) {
+
+            case REGFLAG_DELAY :
+                MDELAY(table[i].count);
+                break;
+
+            case REGFLAG_END_OF_TABLE :
+                break;
+
+            default:
+                dsi_set_cmdq_V2(cmd, table[i].count, table[i].para_list, force_update);
+        }
+    }
+
+}
+
+static void lcm_set_util_funcs(const LCM_UTIL_FUNCS *util)
+{
+    memcpy(&lcm_util, util, sizeof(LCM_UTIL_FUNCS));
+}
+
+static void lcm_get_params(LCM_PARAMS *params)
+{
+    memset(params, 0, sizeof(LCM_PARAMS));
+
+    params->type   = LCM_TYPE_DSI;
+
+    params->width  = FRAME_WIDTH;
+    params->height = FRAME_HEIGHT;
+
+    // enable tearing-free
+    params->dbi.te_mode                 = LCM_DBI_TE_MODE_DISABLED;
+    //params->dbi.te_edge_polarity        = LCM_POLARITY_RISING;
+
+    params->dsi.mode   = BURST_VDO_MODE; //SYNC_PULSE_VDO_MODE;//BURST_VDO_MODE;
+
+    // DSI
+    /* Command mode setting */
+    //  Three lane or Four lane
+    params->dsi.LANE_NUM                = LCM_FOUR_LANE;
+    //The following defined the fomat for data coming from LCD engine.
+    params->dsi.data_format.color_order = LCM_COLOR_ORDER_RGB;
+    params->dsi.data_format.trans_seq   = LCM_DSI_TRANS_SEQ_MSB_FIRST;
+    params->dsi.data_format.padding     = LCM_DSI_PADDING_ON_LSB;
+    params->dsi.data_format.format      = LCM_DSI_FORMAT_RGB888;
+
+    // Highly depends on LCD driver capability.
+    // Not support in MT6573
+    params->dsi.packet_size=256;
+
+    // Video mode setting
+    params->dsi.intermediat_buffer_num = 0;//because DSI/DPI HW design change, this parameters should be 0 when video mode in MT658X; or memory leakage
+
+    params->dsi.PS=LCM_PACKED_PS_24BIT_RGB888;
+    params->dsi.word_count=720*3;
+
+
+    params->dsi.vertical_sync_active                   = 8;// 3    2
+    params->dsi.vertical_backporch                     = 16;// 20   1
+    params->dsi.vertical_frontporch                    = 16; // 1  12
+    params->dsi.vertical_active_line                = FRAME_HEIGHT;
+
+    params->dsi.horizontal_sync_active                = 8;// 50  2
+    params->dsi.horizontal_backporch                = 60;  //72
+    params->dsi.horizontal_frontporch                = 60 ;  //72
+    params->dsi.horizontal_active_pixel                = FRAME_WIDTH;
+	
+	params->physical_width = 58;
+	params->physical_height = 103;
+
+    params->dsi.esd_check_enable = 1;
+    params->dsi.customization_esd_check_enable = 1;
+    params->dsi.lcm_esd_check_table[0].cmd          = 0x0A;
+    params->dsi.lcm_esd_check_table[0].count        = 1;
+    params->dsi.lcm_esd_check_table[0].para_list[0] = 0x9C;
+
+    //params->dsi.LPX=8;
+
+    // Bit rate calculation
+    //Every lane speed
+    //params->dsi.pll_select=1;
+    params->dsi.PLL_CLOCK = 208; // 229 240 230this value must be in MTK suggested table
+    params->dsi.ssc_disable = 1;
+    params->dsi.compatibility_for_nvk = 1;
+}
+
+
+static void lcm_init(void)
+{
+    SET_RESET_PIN(1);
+    MDELAY(20);
+    SET_RESET_PIN(0);
+    MDELAY(50);
+    SET_RESET_PIN(1);
+    MDELAY(120);
+    push_table(lcm_initialization_setting, sizeof(lcm_initialization_setting) / sizeof(struct LCM_setting_table), 1);
+
+    #ifdef BUILD_LK
+    printf("%s, lk otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #else
+    printk("%s, kernel otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #endif
+}
+
+
+static void lcm_suspend(void)
+{
+    push_table(lcm_deep_sleep_mode_in_setting, sizeof(lcm_deep_sleep_mode_in_setting) / sizeof(struct LCM_setting_table), 1);
+
+    #ifdef BUILD_LK
+    printf("%s, lk otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #else
+    printk("%s, kernel otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #endif
+}
+
+
+static void lcm_resume(void)
+{
+    lcm_init();
+
+    #ifdef BUILD_LK
+    printf("%s, lk otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #else
+    printk("%s, kernel otm1285a_hd720_dsi_vdo_yizhiming\n", __func__);
+    #endif
+}
+
+//added for lcm detect ,read adc voltage
+static unsigned int lcm_compare_id_auxadc(void)
+{
+    int data[4] = {0,0,0,0};
+    int res = 0;
+    int rawdata = 0;
+    int lcm_vol = 0;
+
+    res = IMM_GetOneChannelValue(AUXADC_LCM_VOLTAGE_CHANNEL,data,&rawdata);
+    if(res < 0)
+    {
+        #ifdef BUILD_LK
+        printf("cgs otm1285a_hd720_dsi_vdo_yizhiming: get adc data error\n");
+        #endif
+
+        return 0;
+    }
+
+    lcm_vol = data[0]*1000+data[1]*10;
+
+    #ifdef BUILD_LK
+    printf("cgs otm1285a_hd720_dsi_vdo_yizhiming:lcm_vol=%d\n",lcm_vol);
+    #endif
+
+    if (lcm_vol >= MIN_VOLTAGE && lcm_vol <= MAX_VOLTAGE)
+    {
+        #ifdef BUILD_LK
+        printf("cgs otm1285a_hd720_dsi_vdo_yizhiming return 1.\n");
+        #endif
+        return 1;
+    }
+
+    #ifdef BUILD_LK
+    printf("cgs otm1285a_hd720_dsi_vdo_yizhiming return 0.\n");
+    #endif
+
+    return 0;
+
+}
+
+static unsigned int lcm_compare_id(void)
+{
+    int array[4];
+    char buffer[5];
+    int id_high=0;
+    int id_low=0;
+    int id=0;
+    unsigned int lcd_auxadc_id = 0;
+
+    SET_RESET_PIN(1);
+    MDELAY(10);
+    SET_RESET_PIN(0);
+    MDELAY(50);
+
+    SET_RESET_PIN(1);
+    MDELAY(120);
+
+    lcd_auxadc_id = lcm_compare_id_auxadc();
+    #ifdef BUILD_LK
+    printf("cgs lk otm1285a_hd720_dsi_vdo_yizhiming lcd_auxadc_id=%d\n",lcd_auxadc_id);
+    #else
+    printk("cgs kernel otm1285a_hd720_dsi_vdo_yizhiming lcd_auxadc_id=%d\n",lcd_auxadc_id);
+    #endif
+
+    array[0] = 0x00053700;   // read id return 5 byte,version and id
+    dsi_set_cmdq(array, 1, 1);
+
+    read_reg_v2(0xa1, buffer, 5);
+
+    id_high = buffer[2];
+    id_low = buffer[3];
+    id = ((id_high&0xff)<<8) | id_low;
+
+    #ifdef BUILD_LK
+    printf("%s,lk otm1285a_hd720_dsi_vdo_yizhiming id = 0x%x\n", __func__, id);
+    #else
+    printk("%s,kernel otm1285a_hd720_dsi_vdo_yizhiming id = 0x%x\n", __func__, id);
+    #endif
+
+    if(id == LCM_ID_OTM1285A /*&& lcd_auxadc_id == 1*/)
+    {
+        #ifdef BUILD_LK
+        printf("%s,lk otm1285a_hd720_dsi_vdo_yizhiming,read lcd id success,return 1\n", __func__);
+        #else
+        printk("%s,kernel otm1285a_hd720_dsi_vdo_yizhiming,read lcd id success,return 1\n", __func__);
+        #endif
+        return 1;
+    }
+    else
+    {
+        #ifdef BUILD_LK
+        printf("%s,lk otm1285a_hd720_dsi_vdo_yizhiming,read lcd id fail,return 0\n", __func__);
+        #else
+        printk("%s,kernel otm1285a_hd720_dsi_vdo_yizhiming,read lcd id fail,return 0\n", __func__);
+        #endif
+        return 0;
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Get LCM Driver Hooks
+// ---------------------------------------------------------------------------
+LCM_DRIVER otm1285a_hd720_dsi_vdo_drv =
+{
+    .name           	= "otm1285a_hd720_dsi_vdo_yizhiming",
+    .set_util_funcs = lcm_set_util_funcs,
+    .get_params     = lcm_get_params,
+    .init           = lcm_init,
+    .suspend        = lcm_suspend,
+    .resume         = lcm_resume,
+    .compare_id    = lcm_compare_id,
+};
