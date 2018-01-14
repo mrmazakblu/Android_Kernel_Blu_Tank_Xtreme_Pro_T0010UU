@@ -26,16 +26,16 @@ MODULEPWD := $(shell pwd)
 .PHONY: all install clean
 
 all:
-    $(MAKE) -C $(KBUILDDIR) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- \
+	$(MAKE) -C $(KBUILDDIR) ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- \
         M=$(MODULEPWD) CONFIG_SUNWAVE_FP=m modules
 
 install:
-    adb remount
-    adb push sunwave_fp.ko /data/
-    adb shell sync
+	adb remount
+	adb push sunwave_fp.ko /data/
+	adb shell sync
 
 clean:
-    rm -rf *.o *.mod.c .*.cmd .*tmp_versions *.symvers *.order
+	rm -rf *.o *.mod.c .*.cmd .*tmp_versions *.symvers *.order
 
 endif # End of KERNELRELEASE.
 
