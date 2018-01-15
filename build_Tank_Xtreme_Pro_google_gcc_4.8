@@ -1,8 +1,7 @@
 #!/bin/bash
 
-cd ~/android/Tank_Xtreme_Pro
 make mrproper
-export CROSS_COMPILE=~/android/Tank_Xtreme_Pro/google-gcc/arm-eabi-4.8/bin/arm-eabi-
+export CROSS_COMPILE=$(pwd)/arm-eabi-4.8/bin/arm-eabi-
 export ARCH=arm
 export ARCH_MTK_PLATFORM=mt6737t
 ARCH=arm make fq5c_defconfig
