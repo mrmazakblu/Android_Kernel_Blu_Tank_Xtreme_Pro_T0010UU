@@ -1,14 +1,14 @@
 #!/bin/bash
 
 mkdir arm-eabi-4.8
-cd arm-eabi-4.8
 gzip -cd arm-eabi-4.8.tar.gz | tar xvf -
-cd ..
 mkdir output
 make mrproper
+make mrproper O=output
+make clean O=output
 export CROSS_COMPILE=$(pwd)/arm-eabi-4.8/bin/arm-eabi-
 export ARCH=arm
 export ARCH_MTK_PLATFORM=mt6737t
-ARCH=arm make O-output fq5c_defconfig
-ARCH=arm make -j2 O-output
+ARCH=arm make O=output fq5c_defconfig
+ARCH=arm make -j2 O=output
 
