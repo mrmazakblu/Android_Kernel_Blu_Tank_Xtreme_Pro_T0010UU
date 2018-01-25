@@ -123,14 +123,6 @@ static hw_module_info hw_info = {
 #if defined(CONFIG_MTK_PUMP_EXPRESS_PLUS_SUPPORT)
 #include <mach/mt_pe.h>
 #endif
-
-
-
-
-#if defined(DROI_PRO_F5C)
-#define RECOVERY_CHARGING_TEMPERATURE 45
-#define RECOVERY_CHARGING_VOLTAGE  V_CHARGER_MAX-700
-#endif
 /* ////////////////////////////////////////////////////////////////////////////// */
 /* Battery Logging Entry */
 /* ////////////////////////////////////////////////////////////////////////////// */
@@ -415,11 +407,6 @@ bool __attribute__((weak)) mt_usb_is_device(void)
 	return 1;
 }
 
-#ifdef CONFIG_MTK_NCP1854_SUPPORT
-extern void ncp1854_set_chg_en(unsigned int val);
-extern void ncp1854_set_otg_en(unsigned int val);
-#endif
-
 kal_bool upmu_is_chr_det(void)
 {
 #if !defined(CONFIG_POWER_EXT)
@@ -443,24 +430,8 @@ kal_bool upmu_is_chr_det(void)
 		return tmp32;
 #endif
 
-	if (tmp32 == 0) {
-#ifdef CONFIG_MTK_NCP1854_SUPPORT
-
-
-	if (get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT
-	    || get_boot_mode() == LOW_POWER_OFF_CHARGING_BOOT) {
-			//fixed kernel power off charging reboot Droi dingxueqi 20171014
-		}else {
-			if (!mt_usb_is_device()) {
-				battery_log(BAT_LOG_FULL,"ncp1854 reset otg\n");
-				ncp1854_set_otg_en(0);
-				ncp1854_set_chg_en(0);
-				ncp1854_set_otg_en(1);
-			}
-	}
-#endif
+	if (tmp32 == 0)
 		return KAL_FALSE;
-	}
 	/*else {*/
 #if !defined(CONFIG_MTK_DUAL_INPUT_CHARGER_SUPPORT)
 		if (mt_usb_is_device()) {
@@ -2501,9 +2472,6 @@ void mt_battery_GetBatteryData(void)
 static PMU_STATUS mt_battery_CheckBatteryTemp(void)
 {
 	PMU_STATUS status = PMU_STATUS_OK;
-#if defined(DROI_PRO_F5C)
-	static bool g_overTemp = KAL_FALSE;
-#endif
 
 #if defined(CONFIG_MTK_JEITA_STANDARD_SUPPORT)
 
@@ -2534,22 +2502,9 @@ static PMU_STATUS mt_battery_CheckBatteryTemp(void)
 		if (BMT_status.temperature >= MAX_CHARGE_TEMPERATURE) {
 			battery_log(BAT_LOG_CRTI, "[BATTERY] Battery Over Temperature !!\n\r");
 			status = PMU_STATUS_FAIL;
-#if defined(DROI_PRO_F5C)
-			g_overTemp = KAL_TRUE;
-#endif
 		}
 	}
 
-#endif
-
-#if defined(DROI_PRO_F5C)
-	if((g_overTemp == KAL_TRUE) && (BMT_status.temperature <= RECOVERY_CHARGING_TEMPERATURE))
-	{
-		 battery_log(BAT_LOG_CRTI, "[BATTERY] recovery charging after over temperature!! \n\r");
-		 g_overTemp = KAL_FALSE; 
-		 status = PMU_STATUS_OK;
-		 BMT_status.bat_charging_state = CHR_PRE;
-	}
 #endif
 
 	return status;
@@ -2582,18 +2537,6 @@ static PMU_STATUS mt_battery_CheckChargerVoltage(void)
 			BMT_status.bat_charging_state = CHR_ERROR;
 			status = PMU_STATUS_FAIL;
 		}
-
-
-#if defined(DROI_PRO_F5C)
-		if((BMT_status.charger_protect_status == charger_OVER_VOL) && (BMT_status.charger_vol <= RECOVERY_CHARGING_VOLTAGE ))
-		{
-			battery_log(BAT_LOG_CRTI, "[BATTERY] recovery charging afer over voltage !! \r\n");
-			BMT_status.charger_protect_status = 0;
-			BMT_status.bat_charging_state = CHR_PRE;
-			status = PMU_STATUS_OK;
-		}
-#endif
-
 	}
 
 	return status;
@@ -2853,11 +2796,8 @@ static void mt_battery_thermal_check(void)
 #if defined(CONFIG_MTK_JEITA_STANDARD_SUPPORT)
 		/* ignore default rule */
 #else
-    #if defined(DROI_PRO_PF5_A7)
-        if (BMT_status.temperature >= 65) {
-    #else
-		if (BMT_status.temperature >= 60) {
-    #endif
+		//if (BMT_status.temperature >= 60) {
+		if (BMT_status.temperature >= 65) {
 #if defined(CONFIG_POWER_EXT)
 			battery_log(BAT_LOG_CRTI,
 				    "[BATTERY] CONFIG_POWER_EXT, no update battery update power down.\n");
@@ -2934,6 +2874,11 @@ CHARGER_TYPE mt_charger_type_detection(void)
 #endif
 	{
 		battery_charging_control(CHARGING_CMD_GET_CHARGER_TYPE, &CHR_Type_num);
+
+        	if (CHR_Type_num != STANDARD_CHARGER) { //get charger type again;
+            	battery_charging_control(CHARGING_CMD_GET_CHARGER_TYPE, &CHR_Type_num);
+        	}
+
 		BMT_status.charger_type = CHR_Type_num;
 	}
 #else
@@ -2953,9 +2898,9 @@ CHARGER_TYPE mt_charger_type_detection(void)
 	{
 		battery_charging_control(CHARGING_CMD_GET_CHARGER_TYPE, &CHR_Type_num);
 
-		if (STANDARD_CHARGER != CHR_Type_num) {
-			battery_charging_control(CHARGING_CMD_GET_CHARGER_TYPE, &CHR_Type_num);
-		}
+        	if (CHR_Type_num != STANDARD_CHARGER) { //get charger type again;
+            	battery_charging_control(CHARGING_CMD_GET_CHARGER_TYPE, &CHR_Type_num);
+        	}
 
 		BMT_status.charger_type = CHR_Type_num;
 	}
@@ -3229,21 +3174,6 @@ extern void led_light_on(void);
 extern void led_light_off(void);
 #endif
 
-#if defined(CONFIG_MTK_LED_RGB_LIGHT)
-extern void red_light_on(void);
-extern void green_light_on(void);
-extern void all_light_off(void);
-static int count_red_light=0,conut_green_light=100;
-#endif
-
-#if defined(CONFIG_MTK_LED_RGB_LIGHT_SGM31324)
-extern bool sgm31324_flag;
-extern void led_green_on(void);
-extern void led_blue_on(void);
-extern void led_rgb_all_off(void);
-static int count_green_light=0,conut_blue_light=100;
-#endif
-
 void BAT_thread(void)
 {
 	static kal_bool battery_meter_initilized = KAL_FALSE;
@@ -3255,110 +3185,6 @@ void BAT_thread(void)
 	else
 		led_light_off();
 	#endif
-
-#if defined(CONFIG_MTK_LED_RGB_LIGHT)
-		//printk("BMT_status.UI_SOC ====dingxueqi1===%d,bat_is_charger_exist()=%d\n",BMT_status.UI_SOC,bat_is_charger_exist());
-		if (BMT_status.UI_SOC == 100)
-		{
-			if (bat_is_charger_exist() == KAL_TRUE)
-			{
-				//printk("dingxueqi1===  line=%d\n",__LINE__);
-				conut_green_light=100;
-				all_light_off();
-				green_light_on();
-			}
-			else if (bat_is_charger_exist() == KAL_FALSE)
-			{
-				//printk("dingxueqi1===  line=%d\n",__LINE__);
-				conut_green_light=0;
-				count_red_light=0;
-				all_light_off();
-			}
-			else
-			{
-
-			}
-		}
-		else if ((BMT_status.UI_SOC >= 0)&&(BMT_status.UI_SOC < 100))
-		{
-
-			//printk("get_battery_percent ====dingxueqi===%d\n",get_battery_percent);
-			if (bat_is_charger_exist() == KAL_TRUE)
-			{
-				count_red_light=100;
-				all_light_off();
-				red_light_on();
-			}
-			else if(bat_is_charger_exist() == KAL_FALSE)
-			{
-				count_red_light=0;
-				conut_green_light=0;
-				all_light_off();
-			}
-			else
-			{
-
-			}
-		}
-		else
-		{
-
-		}
-#endif
-
-#if defined(CONFIG_MTK_LED_RGB_LIGHT_SGM31324)
-    if(sgm31324_flag){
-		//printk("BMT_status.UI_SOC ====dingxueqi1===%d,bat_is_charger_exist()=%d\n",BMT_status.UI_SOC,bat_is_charger_exist());
-		if (BMT_status.UI_SOC == 100)
-		{
-			if (bat_is_charger_exist() == KAL_TRUE)
-			{
-				//printk("dingxueqi1===  line=%d\n",__LINE__);
-			    conut_blue_light=100;
-			    led_rgb_all_off();
-			    led_blue_on();
-			}
-			else if (bat_is_charger_exist() == KAL_FALSE)
-			{
-				//printk("dingxueqi1===  line=%d\n",__LINE__);
-				conut_blue_light=0;
-				count_green_light=0;
-				led_rgb_all_off();
-			}
-			else
-			{
-
-			}
-		}
-		else if ((BMT_status.UI_SOC >= 0)&&(BMT_status.UI_SOC < 100))
-		{
-
-			//printk("get_battery_percent ====dingxueqi===%d\n",get_battery_percent);
-			if (bat_is_charger_exist() == KAL_TRUE)
-			{
-			    count_green_light=100;
-			    led_rgb_all_off();
-			    led_green_on();
-			}
-			else if(bat_is_charger_exist() == KAL_FALSE)
-			{
-				count_green_light=0;
-				conut_blue_light=0;
-				led_rgb_all_off();
-			}
-			else
-			{
-
-			}
-		}
-		else
-		{
-
-		}
-    }else{
-
-		}
-#endif
 
 	if (battery_meter_initilized == KAL_FALSE) {
 		battery_meter_initial();	/* move from battery_probe() to decrease booting time */
@@ -4664,7 +4490,7 @@ static int battery_probe(struct platform_device *dev)
 #endif
 
 	sprintf(bat_cap,"%dmAh",batt_meter_cust_data.q_max_pos_25_h_current);
-	hw_info.id = batt_meter_cust_data.q_max_pos_25;
+	hw_info.id = 4300;
 	if (1 == batt_cust_data.high_battery_voltage_support){
 		strcpy(high_volt_support,"yes");
 	}else{

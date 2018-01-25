@@ -118,14 +118,6 @@
 static unsigned char CTPM_FW[] = {
 	#include "FT5336_20170613_app.i"
 };
-#elif defined(DROI_PRO_PF5_A7)
-static unsigned char CTPM_FW[] = {
-	#include "FT6336U_F03L_PF5_A7_20170913_app.i"
-};
-#elif defined(DROI_PRO_PU6_JF_K16)
-static unsigned char CTPM_FW[] = {
-	#include "FT6336U_DROI_PRO_PU6_JF_K16_20170925_app.i"
-};
 #else
 static unsigned char CTPM_FW[] = {
 	#include "HQ_AW875_FT3427_DJ_A.08.02_V1.0_V02_D01_20151204_app.i"
@@ -1397,7 +1389,7 @@ int fts_5x36_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf, u32 dw_lent
 		}
 
 		fts_i2c_write(client, packet_buf, FTS_PACKET_LENGTH+6);
-		//msleep(FTS_PACKET_LENGTH/6 + 1);  //modify for update tp fw reboot
+		msleep(12);  //modify for update tp fw reboot
 	}
 
 	if ((dw_lenth) % FTS_PACKET_LENGTH > 0)
@@ -3459,8 +3451,8 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 	/*judge the fw that will be upgraded
 	* if illegal, then stop upgrade and return.
 	*/
-	if ((fts_updateinfo_curr.CHIP_ID==0x11) ||(fts_updateinfo_curr.CHIP_ID==0x12) ||(fts_updateinfo_curr.CHIP_ID==0x13) ||(fts_updateinfo_curr.CHIP_ID==0x14)
-		||(fts_updateinfo_curr.CHIP_ID==0x55) ||(fts_updateinfo_curr.CHIP_ID==0x06) ||(fts_updateinfo_curr.CHIP_ID==0x0a) ||(fts_updateinfo_curr.CHIP_ID==0x08))
+	if(1)// ((fts_updateinfo_curr.CHIP_ID==0x11) ||(fts_updateinfo_curr.CHIP_ID==0x12) ||(fts_updateinfo_curr.CHIP_ID==0x13) ||(fts_updateinfo_curr.CHIP_ID==0x14)
+		//||(fts_updateinfo_curr.CHIP_ID==0x55) ||(fts_updateinfo_curr.CHIP_ID==0x06) ||(fts_updateinfo_curr.CHIP_ID==0x0a) ||(fts_updateinfo_curr.CHIP_ID==0x08))
 	{
 		if (fw_len < 8 || fw_len > 32 * 1024)
 		{
@@ -3474,187 +3466,15 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 		{
 			/*FW upgrade */
 			pbt_buf = CTPM_FW;
-			/*call the upgrade function */
-			if ((fts_updateinfo_curr.CHIP_ID==0x55) ||(fts_updateinfo_curr.CHIP_ID==0x08) ||(fts_updateinfo_curr.CHIP_ID==0x0a))
-			{
-				i_ret = fts_5x06_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-			}
-			else if ((fts_updateinfo_curr.CHIP_ID==0x11) ||(fts_updateinfo_curr.CHIP_ID==0x12) ||(fts_updateinfo_curr.CHIP_ID==0x13) ||(fts_updateinfo_curr.CHIP_ID==0x14))
+
+			 if(1)// ((fts_updateinfo_curr.CHIP_ID==0x11) ||(fts_updateinfo_curr.CHIP_ID==0x12) ||(fts_updateinfo_curr.CHIP_ID==0x13) ||(fts_updateinfo_curr.CHIP_ID==0x14))
 			{
 				i_ret = fts_5x36_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
 			}
-			else if ((fts_updateinfo_curr.CHIP_ID==0x06))
-			{
-				i_ret = fts_6x06_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-			}
-			if (i_ret != 0)
-				dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
-			else if(fts_updateinfo_curr.AUTO_CLB==AUTO_CLB_NEED)
-			{
-				fts_ctpm_auto_clb(client);
-			}
-		}
-		else
-		{
-			dev_err(&client->dev, "%s:FW format error\n", __func__);
-			return -EBADFD;
-		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x36))
-	{
-		if (fw_len < 8 || fw_len > 32 * 1024)
-		{
-			dev_err(&client->dev, "%s:FW length error\n", __func__);
-			return -EIO;
-		}
-		pbt_buf = CTPM_FW;
-		i_ret = fts_6x36_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-		if (i_ret != 0)
-			dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x64))
-	{
-		if (fw_len < 8 || fw_len > 48 * 1024)
-		{
-			dev_err(&client->dev, "%s:FW length error\n", __func__);
-			return -EIO;
-		}
-		pbt_buf = CTPM_FW;
-		i_ret = fts_6336GU_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-		if (i_ret != 0)
-			dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x54))
-	{
-		if (fw_len < 8 || fw_len > 54 * 1024)
-		{
-			pr_err("FW length error\n");
-			return -EIO;
-		}
-		/*FW upgrade*/
-		pbt_buf = CTPM_FW;
-		/*call the upgrade function*/
-		i_ret = fts_5x46_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-		if (i_ret != 0)
-		{
-					dev_err(&client->dev, "[FTS] upgrade failed. err=%d.\n", i_ret);
-		}
-		else
-		{
-			#ifdef AUTO_CLB
-				fts_ctpm_auto_clb(client);  /*start auto CLB*/
-			#endif
-		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x58))
-	{
-		if (fw_len < 8 || fw_len > 54*1024)
-		{
-			pr_err("FW length error\n");
-			return -EIO;
+
 		}
 
-		/*FW upgrade*/
-		pbt_buf = CTPM_FW;
-		/*call the upgrade function*/
-		i_ret = fts_5822_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-		if (i_ret != 0)
-		{
-			dev_err(&client->dev, "[FTS] upgrade failed. err=%d.\n", i_ret);
-		}
-		else
-		{
-			#ifdef AUTO_CLB
-				fts_ctpm_auto_clb(client);  /*start auto CLB*/
-			#endif
-		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x59))
-	{
-	    	if (fw_len < 8 || fw_len > 54*1024)
-		{
-		    	pr_err("FW length error\n");
-	    		return -EIO;
-	    	}
 
-	    	/*FW upgrade*/
-    		pbt_buf = CTPM_FW;
-	   	 /*call the upgrade function*/
-    		i_ret = fts_5x26_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-    		if (i_ret != 0)
-		{
-    			dev_err(&client->dev, "[FTS] upgrade failed. err=%d.\n", i_ret);
-    		}
-		else
-		{
-			#ifdef AUTO_CLB
-    				fts_ctpm_auto_clb(client);  /*start auto CLB*/
-			#endif
-    		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x86))
-	{
-	    	/*FW upgrade*/
-    		pbt_buf = CTPM_FW;
-	   	 /*call the upgrade function*/
-    		i_ret = fts_8606_writepram(client, aucFW_PRAM_BOOT, sizeof(aucFW_PRAM_BOOT));
-
-		if (i_ret != 0)
-		{
-			dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
-			return -EIO;
-		}
-
-		i_ret =  fts_8606_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-
-    		if (i_ret != 0)
-		{
-    			dev_err(&client->dev, "[FTS] upgrade failed. err=%d.\n", i_ret);
-    		}
-		else
-		{
-			#ifdef AUTO_CLB
-    				fts_ctpm_auto_clb(client);  /*start auto CLB*/
-			#endif
-    		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x87))
-	{
-	    	/*FW upgrade*/
-    		pbt_buf = CTPM_FW;
-	   	 /*call the upgrade function*/
-    		i_ret = fts_8716_writepram(client, aucFW_PRAM_BOOT, sizeof(aucFW_PRAM_BOOT));
-
-		if (i_ret != 0)
-		{
-			dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
-			return -EIO;
-		}
-
-		i_ret =  fts_8716_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-
-    		if (i_ret != 0)
-		{
-    			dev_err(&client->dev, "[FTS] upgrade failed. err=%d.\n", i_ret);
-    		}
-		else
-		{
-			#ifdef AUTO_CLB
-    				fts_ctpm_auto_clb(client);  /*start auto CLB*/
-			#endif
-    		}
-	}
-	else if ((fts_updateinfo_curr.CHIP_ID==0x0E))
-	{
-		if (fw_len < 8 || fw_len > 32 * 1024)
-		{
-			dev_err(&client->dev, "%s:FW length error\n", __func__);
-			return -EIO;
-		}
-		pbt_buf = CTPM_FW;
-		i_ret = fts_3x07_ctpm_fw_upgrade(client, pbt_buf, sizeof(CTPM_FW));
-		if (i_ret != 0)
-			dev_err(&client->dev, "%s:upgrade failed. err.\n",__func__);
 	}
 	return i_ret;
 }

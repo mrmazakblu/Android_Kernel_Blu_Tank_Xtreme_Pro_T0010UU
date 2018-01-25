@@ -51,7 +51,7 @@ static imgsensor_info_struct imgsensor_info = {
 
     .pre = {
         .pclk = 42000000,                //record different mode's pclk
-        .linelength = 1126,                //record different mode's linelength
+        .linelength = 1123,                //record different mode's linelength
         .framelength = 1240,            //record different mode's framelength
         .startx = 0,                    //record different mode's startx of grabwindow
         .starty = 0,                    //record different mode's starty of grabwindow
@@ -64,7 +64,7 @@ static imgsensor_info_struct imgsensor_info = {
     },
     .cap = {
         .pclk = 42000000,
-        .linelength = 1126,
+        .linelength = 1123,
         .framelength = 1240,
         .startx = 0,
         .starty = 0,
@@ -75,7 +75,7 @@ static imgsensor_info_struct imgsensor_info = {
     },
     .cap1 = {                            //capture for PIP 24fps relative information, capture1 mode must use same framelength, linelength with Capture mode for shutter calculate
         .pclk = 42000000,
-        .linelength = 1126,
+        .linelength = 1123,
         .framelength = 1240,
         .startx = 0,
         .starty = 0,
@@ -86,7 +86,7 @@ static imgsensor_info_struct imgsensor_info = {
     },
     .normal_video = {
           .pclk = 42000000,
-        .linelength = 1126,
+        .linelength = 1123,
         .framelength = 1240,
         .startx = 0,
         .starty = 0,
@@ -97,7 +97,7 @@ static imgsensor_info_struct imgsensor_info = {
     },
     .hs_video = {
           .pclk = 42000000,
-        .linelength = 1126,
+        .linelength = 1123,
         .framelength = 1240,
         .startx = 0,
         .starty = 0,
@@ -108,7 +108,7 @@ static imgsensor_info_struct imgsensor_info = {
     },
     .slim_video = {
         .pclk = 42000000,
-        .linelength = 1126,
+        .linelength = 1123,
         .framelength = 1240,
         .startx = 0,
         .starty = 0,
@@ -206,7 +206,7 @@ static kal_uint32 return_sensor_id(void)
 
 static void set_max_framerate(UINT16 framerate,kal_bool min_framelength_en)
 {
-   // kal_int16 dummy_line;
+    //kal_int16 dummy_line;
     kal_uint32 frame_length = imgsensor.frame_length;
     //unsigned long flags;
 
@@ -268,13 +268,15 @@ static void set_shutter(kal_uint16 shutter)
 	// Update Shutter
 	if(shutter > 16383) shutter = 16383;
 	if(shutter < 6) shutter = 6;
+	if (shutter==imgsensor.frame_length-1) //add 20160527
+		shutter +=1;
 
 	//Update Shutter
 	write_cmos_sensor(0xfe, 0x00);
 	write_cmos_sensor(0x03, (shutter>>8) & 0x3F);
 	write_cmos_sensor(0x04, shutter & 0xFF);
 
-  //  LOG_INF("Exit! shutter =%d, framelength =%d\n", shutter,imgsensor.frame_length);
+    LOG_INF("Exit! shutter =%d, framelength =%d\n", shutter,imgsensor.frame_length);
 
 }    /*    set_shutter */
 
@@ -337,7 +339,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x24);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x01);//
+		write_cmos_sensor(0xb6,  0x01);
 		temp = 64*iReg/ANALOG_GAIN_2;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -347,7 +349,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x28);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x02);//
+		write_cmos_sensor(0xb6,  0x02);
 		temp = 64*iReg/ANALOG_GAIN_3;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -357,7 +359,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x30);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x03);//
+		write_cmos_sensor(0xb6,  0x03);
 		temp = 64*iReg/ANALOG_GAIN_4;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -367,7 +369,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x50);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x04);//
+		write_cmos_sensor(0xb6,  0x04);
 		temp = 64*iReg/ANALOG_GAIN_5;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -377,7 +379,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x50);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x05);//
+		write_cmos_sensor(0xb6,  0x05);
 		temp = 64*iReg/ANALOG_GAIN_6;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -387,7 +389,7 @@ static kal_uint16 set_gain(kal_uint16 gain)
 		write_cmos_sensor(0xfe, 0x00);
 		write_cmos_sensor(0x33, 0x50);
 		//analog gain
-		write_cmos_sensor(0xb6,  0x06);//
+		write_cmos_sensor(0xb6,  0x06);
 		temp = 64*iReg/ANALOG_GAIN_7;
 		write_cmos_sensor(0xb1, temp>>6);
 		write_cmos_sensor(0xb2, (temp<<2)&0xfc);
@@ -436,7 +438,7 @@ static void sensor_init(void)
 {
 	LOG_INF("E");
 
-	/*system*/
+	/*SYS*/
 	write_cmos_sensor(0xfe,0x00);
 	write_cmos_sensor(0xfe,0x00);
 	write_cmos_sensor(0xfe,0x00);
@@ -453,16 +455,16 @@ static void sensor_init(void)
 	/*ANALOG & CISCTL*/
 	write_cmos_sensor(0xfe,0x00);
 	write_cmos_sensor(0x03,0x04);
-	write_cmos_sensor(0x04,0x5f);
-	write_cmos_sensor(0x05,0x02); //02 //hb
-	write_cmos_sensor(0x06,0xbf);
-	write_cmos_sensor(0x07,0x00);//vb
+	write_cmos_sensor(0x04,0x62);
+	write_cmos_sensor(0x05,0x02);
+	write_cmos_sensor(0x06,0xbc);//bf 20160527
+	write_cmos_sensor(0x07,0x00);
 	write_cmos_sensor(0x08,0x10);
-	write_cmos_sensor(0x0a,0x0a);//
+	write_cmos_sensor(0x0a,0x0a);
 	write_cmos_sensor(0x0c,0x12);
-	write_cmos_sensor(0x0d,0x04);//height
+	write_cmos_sensor(0x0d,0x04);
 	write_cmos_sensor(0x0e,0xb8);
-	write_cmos_sensor(0x0f,0x06);//width
+	write_cmos_sensor(0x0f,0x06);
 	write_cmos_sensor(0x10,0x50);
 	write_cmos_sensor(0x17,MIRROR);//Don't Change Here!!!
 	write_cmos_sensor(0x1b,0x11);
@@ -513,6 +515,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0x96,0xb0);
 	write_cmos_sensor(0x97,0x06);
 	write_cmos_sensor(0x98,0x40);
+
 	/*BLK*/
 	write_cmos_sensor(0x18,0x02);
 	write_cmos_sensor(0x40,0x22);
@@ -533,7 +536,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0xbe,0x02);
 
 	/*Gain*/
-	write_cmos_sensor(0xb0,0x4d);
+	write_cmos_sensor(0xb0,0x50);
 	write_cmos_sensor(0xb1,0x01);
 	write_cmos_sensor(0xb2,0x00);
 	write_cmos_sensor(0xb3,0x40);
@@ -550,7 +553,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0xfe,0x03);
 	write_cmos_sensor(0x10,0x00);//Stream off
 	write_cmos_sensor(0x01,0x03);
-	write_cmos_sensor(0x02,0x33);
+	write_cmos_sensor(0x02,0x32);
 	write_cmos_sensor(0x03,0x90);
 	write_cmos_sensor(0x04,0x04);
 	write_cmos_sensor(0x05,0x00);
@@ -559,16 +562,17 @@ static void sensor_init(void)
 	write_cmos_sensor(0x12,0xd0);
 	write_cmos_sensor(0x13,0x07);
 	write_cmos_sensor(0x15,0x00);
-	write_cmos_sensor(0x21,0x10);
+	write_cmos_sensor(0x21,0x08);
 	write_cmos_sensor(0x22,0x05);
-	write_cmos_sensor(0x23,0x30);
+	write_cmos_sensor(0x23,0x13);
 	write_cmos_sensor(0x24,0x02);
 	write_cmos_sensor(0x25,0x13);
 	write_cmos_sensor(0x26,0x08);
-	write_cmos_sensor(0x29,0x06);
-	write_cmos_sensor(0x2a,0x0a);
+	write_cmos_sensor(0x29,0x04);
+	write_cmos_sensor(0x2a,0x08);
 	write_cmos_sensor(0x2b,0x08);
 	write_cmos_sensor(0xfe,0x00);
+
 }    /*    sensor_init  */
 
 
@@ -619,8 +623,10 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 
     if (enable) {
         write_cmos_sensor(0xfe, 0x00);
+		write_cmos_sensor(0x8c, 0x01);
     } else {
         write_cmos_sensor(0xfe, 0x00);
+		write_cmos_sensor(0x8c, 0x00);
     }
     spin_lock(&imgsensor_drv_lock);
     imgsensor.test_pattern = enable;
@@ -1210,7 +1216,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
     UINT32 *feature_return_para_32=(UINT32 *) feature_para;
     UINT32 *feature_data_32=(UINT32 *) feature_para;
     unsigned long long *feature_data=(unsigned long long *) feature_para;
-    //unsigned long long *feature_return_para=(unsigned long long *) feature_para;
 
     SENSOR_WINSIZE_INFO_STRUCT *wininfo;
     MSDK_SENSOR_REG_INFO_STRUCT *sensor_reg_data=(MSDK_SENSOR_REG_INFO_STRUCT *) feature_para;

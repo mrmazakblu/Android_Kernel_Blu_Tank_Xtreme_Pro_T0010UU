@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-/*******************************************************************************
+/*****************************************************************************
  *
  * Filename:
  * ---------
@@ -103,6 +103,47 @@ DEFINE_MUTEX(g_aicr_access_mutex);
 DEFINE_MUTEX(g_ichg_access_mutex);
 unsigned int g_aicr_upper_bound;
 static bool g_enable_dynamic_cv = true;
+
+#if 1//defined(TYD_PRO_FQ5C_XDNZ)
+//add for limit charger current by lcm on/off
+extern int lcm_state_flag;
+extern int lcm_flag;
+//end for limit charger current by lcm on/off
+static void select_charging_current_temperature(void)
+{
+    if(KAL_TRUE == BMT_status.charger_exist) {
+		if(BMT_status.charger_type == STANDARD_CHARGER){
+			if((BMT_status.temperature >= 45)&&(BMT_status.temperature < 60)){
+        		g_temp_CC_value = CHARGE_CURRENT_1600_00_MA;
+//printk("cuizhaojun111: BMT_status.temperature = %d\n",BMT_status.temperature);
+			}else if((BMT_status.temperature >= 10)&&(BMT_status.temperature < 45)){
+        		if((lcm_state_flag == 1) || (lcm_flag == 1)) {
+				g_temp_CC_value = CHARGE_CURRENT_2500_00_MA;
+//printk("cuizhaojun222: BMT_status.temperature = %d\n",BMT_status.temperature);
+				}else{
+				g_temp_CC_value = CHARGE_CURRENT_1600_00_MA;
+//printk("cuizhaojun333: BMT_status.temperature = %d\n",BMT_status.temperature);
+				}
+    		}else if((BMT_status.temperature > 0)&&(BMT_status.temperature < 10)){
+        		g_temp_CC_value = CHARGE_CURRENT_800_00_MA;
+//printk("cuizhaojun444: BMT_status.temperature = %d\n",BMT_status.temperature);
+    		}else{
+        		//g_temp_CC_value = CHARGE_CURRENT_0_00_MA;
+//printk("cuizhaojun555: BMT_status.temperature = %d\n",BMT_status.temperature);
+    		}
+		}else{
+			if((BMT_status.temperature > 60)||(BMT_status.temperature < 0)){
+        		//g_temp_CC_value = CHARGE_CURRENT_0_00_MA;
+//printk("cuizhaojun666: BMT_status.temperature = %d\n",BMT_status.temperature);
+			}
+		}
+        //printk("#jesse# resume ac_charger_current = %d\n",g_temp_CC_value);
+    } else {
+        //printk("#jesse# limit charger current by lcm state is not effect\n");
+    }
+}
+#endif
+//end
 
  /* ///////////////////////////////////////////////////////////////////////////////////////// */
  /* // JEITA */
@@ -500,6 +541,54 @@ unsigned int set_bat_charging_current_limit(int current_limit)
 		if (current_limit > chr_type_ichg)
 			current_limit = chr_type_ichg;
 		g_bcct_value = current_limit;
+
+		if (current_limit < 70)
+			g_temp_CC_value = CHARGE_CURRENT_0_00_MA;
+		else if (current_limit < 200)
+			g_temp_CC_value = CHARGE_CURRENT_70_00_MA;
+		else if (current_limit < 300)
+			g_temp_CC_value = CHARGE_CURRENT_200_00_MA;
+		else if (current_limit < 400)
+			g_temp_CC_value = CHARGE_CURRENT_300_00_MA;
+		else if (current_limit < 450)
+			g_temp_CC_value = CHARGE_CURRENT_400_00_MA;
+		else if (current_limit < 550)
+			g_temp_CC_value = CHARGE_CURRENT_450_00_MA;
+		else if (current_limit < 650)
+			g_temp_CC_value = CHARGE_CURRENT_550_00_MA;
+		else if (current_limit < 700)
+			g_temp_CC_value = CHARGE_CURRENT_650_00_MA;
+		else if (current_limit < 800)
+			g_temp_CC_value = CHARGE_CURRENT_700_00_MA;
+		else if (current_limit < 900)
+			g_temp_CC_value = CHARGE_CURRENT_800_00_MA;
+		else if (current_limit < 1000)
+			g_temp_CC_value = CHARGE_CURRENT_900_00_MA;
+		else if (current_limit < 1100)
+			g_temp_CC_value = CHARGE_CURRENT_1000_00_MA;
+		else if (current_limit < 1200)
+			g_temp_CC_value = CHARGE_CURRENT_1100_00_MA;
+		else if (current_limit < 1300)
+			g_temp_CC_value = CHARGE_CURRENT_1200_00_MA;
+		else if (current_limit < 1400)
+			g_temp_CC_value = CHARGE_CURRENT_1300_00_MA;
+		else if (current_limit < 1500)
+			g_temp_CC_value = CHARGE_CURRENT_1400_00_MA;
+		else if (current_limit < 1600)
+			g_temp_CC_value = CHARGE_CURRENT_1500_00_MA;
+		else if (current_limit < 1700)
+			g_temp_CC_value = CHARGE_CURRENT_1600_00_MA;
+		else if (current_limit < 1800)
+			g_temp_CC_value = CHARGE_CURRENT_1700_00_MA;
+		else if (current_limit < 1900)
+			g_temp_CC_value = CHARGE_CURRENT_1800_00_MA;
+		else if (current_limit < 2000)
+			g_temp_CC_value = CHARGE_CURRENT_1900_00_MA;
+		else if (current_limit == 2000)
+			g_temp_CC_value = CHARGE_CURRENT_2000_00_MA;
+		else
+			g_temp_CC_value = CHARGE_CURRENT_450_00_MA;
+
 	} else /* change to default current setting */
 		g_bcct_flag = 0;
 	g_bcct_flag = 0;//add by zhanggenjian @20170224.fixed can not charging. temporary close current bcct.
@@ -751,6 +840,14 @@ void select_charging_current(void)
 	}
 
 	mtk_check_aicr_upper_bound();
+
+//add for limit charger current by lcm on/off
+#if 1//defined(TYD_PRO_FQ5C_XDNZ)
+//printk("#jesse# g_temp_CC_value1 = %d\n",g_temp_CC_value);
+    select_charging_current_temperature();
+//printk("#jesse# g_temp_CC_value2 = %d\n",g_temp_CC_value);
+#endif
+
 }
 
 void select_charging_current_bcct(void)
@@ -794,8 +891,22 @@ void select_charging_current_bcct(void)
 			g_temp_CC_value = CHARGE_CURRENT_1050_00_MA;
 		else if (g_bcct_value < 1250)
 			g_temp_CC_value = CHARGE_CURRENT_1150_00_MA;
-		else if (g_bcct_value == 1250)
-			g_temp_CC_value = CHARGE_CURRENT_1250_00_MA;
+		else if (g_bcct_value < 1350)
+			g_temp_CC_value = CHARGE_CURRENT_1300_00_MA;
+		else if (g_bcct_value < 1450)
+			g_temp_CC_value = CHARGE_CURRENT_1400_00_MA;
+		else if (g_bcct_value < 1550)
+			g_temp_CC_value = CHARGE_CURRENT_1500_00_MA;
+		else if (g_bcct_value < 1650)
+			g_temp_CC_value = CHARGE_CURRENT_1600_00_MA;
+		else if (g_bcct_value < 1750)
+			g_temp_CC_value = CHARGE_CURRENT_1700_00_MA;
+		else if (g_bcct_value < 1850)
+			g_temp_CC_value = CHARGE_CURRENT_1800_00_MA;
+		else if (g_bcct_value < 1950)
+			g_temp_CC_value = CHARGE_CURRENT_1900_00_MA;
+		else if (g_bcct_value <= 2050)
+			g_temp_CC_value = CHARGE_CURRENT_2000_00_MA;
 		else
 			g_temp_CC_value = CHARGE_CURRENT_650_00_MA;
 		/* --------------------------------------------------- */

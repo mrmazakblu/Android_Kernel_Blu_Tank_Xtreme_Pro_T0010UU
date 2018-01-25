@@ -287,8 +287,7 @@ struct fts_ts_data {
 #define MTK_EN 									1
 #define FTS_APK_DEBUG
 #define SYSFS_DEBUG
-//#if defined(DROI_PRO_FQ5C_XDNZ)||defined(DROI_PRO_PU6_JF_K16)
-#if defined(DROI_PRO_PF5_A7)
+#if defined(DROI_PRO_FQ5C_XDNZ)
 #define TPD_AUTO_UPGRADE
 #else
 //#define TPD_AUTO_UPGRADE

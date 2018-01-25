@@ -37,11 +37,7 @@ static char tyd_resolution[30]={"already"};
 static hw_module_info hw_info = {
 	.type = HW_MODULE_TYPE_LCM,
 	.priority = HW_MODULE_PRIORITY_LCM,
-#if defined(DROI_PRO_FQ5B_XDNZ)
-	.vendor = "BOOYITECH",
-#else
-	.vendor = "vendor",
-#endif
+	.vendor = "YiZhiMing",
 	.id = 0xffff,
 };
 

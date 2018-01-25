@@ -825,8 +825,10 @@ int BattThermistorConverTemp(int Res)
 
 	if (Res >= batt_temperature_table[0].TemperatureR) {
 		TBatt_Value = -20;
-	} else if (Res <= batt_temperature_table[16].TemperatureR) {
-		TBatt_Value = 60;
+	//} else if (Res <= batt_temperature_table[16].TemperatureR) {
+		//TBatt_Value = 60;
+	} else if (Res <= batt_temperature_table[18].TemperatureR) {
+		TBatt_Value = 65;
 	} else {
 		RES1 = batt_temperature_table[0].TemperatureR;
 		TMP1 = batt_temperature_table[0].BatteryTemp;
@@ -945,30 +947,6 @@ int BattThermistorConverTemp(int Res)
 	int RES1 = 0, RES2 = 0;
 	int TBatt_Value = -200, TMP1 = 0, TMP2 = 0;
 
-#if defined(DROI_PRO_PF5_A7)
-	if (Res >= Batt_Temperature_Table[0].TemperatureR) {
-		TBatt_Value = -20;
-	} else if (Res <= Batt_Temperature_Table[17].TemperatureR) {
-	    TBatt_Value = 65;
-	} else {
-		RES1 = Batt_Temperature_Table[0].TemperatureR;
-		TMP1 = Batt_Temperature_Table[0].BatteryTemp;
-
-		for (i = 0; i <= 17; i++) {
-			if (Res <  Batt_Temperature_Table[i].TemperatureR) {
-				RES1 = Batt_Temperature_Table[i].TemperatureR;
-				TMP1 = Batt_Temperature_Table[i].BatteryTemp;
-
-			} else {
-				RES2 = Batt_Temperature_Table[i].TemperatureR;
-				TMP2 = Batt_Temperature_Table[i].BatteryTemp;
-				break;
-			}
-		}
-
-		TBatt_Value = (((Res - RES2) * TMP1) + ((RES1 - Res) * TMP2)) / (RES1 - RES2);
-	}
-#else
 	if (Res >= Batt_Temperature_Table[0].TemperatureR) {
 		TBatt_Value = -20;
 	} else if (Res <= Batt_Temperature_Table[16].TemperatureR) {
@@ -991,7 +969,7 @@ int BattThermistorConverTemp(int Res)
 
 		TBatt_Value = (((Res - RES2) * TMP1) + ((RES1 - Res) * TMP2)) / (RES1 - RES2);
 	}
-#endif
+
 	return TBatt_Value;
 }
 
@@ -1929,17 +1907,13 @@ void dod_init(void)
 
 
 #if defined(IS_BATTERY_REMOVE_BY_PMIC)
-#if defined(DROI_PRO_PF5_A7)
-    //modify for remove battery ui_soc change
-    {
-#else
 	if (is_battery_remove_pmic() == 0 && (g_rtc_fg_soc != 0)
 		&& batt_meter_cust_data.vbat_remove_detection) {
 		bm_print(BM_LOG_CRTI, "[FGADC]is_battery_remove()==0 , use rtc_fg_soc%d\n",
 			 g_rtc_fg_soc);
 		gFG_capacity_by_v = g_rtc_fg_soc;
 	} else {
-#endif
+
 #if defined(INIT_SOC_BY_SW_SOC)
 if (((g_rtc_fg_soc != 0)
 		     &&
